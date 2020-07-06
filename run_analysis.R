@@ -38,7 +38,7 @@ subject_test <- read.table("./UCI HAR Dataset/test/subject_test.txt")
 x_test <- read.table("./UCI HAR Dataset/test/X_test.txt")
 y_test <- read.table("./UCI HAR Dataset/test/Y_test.txt")
 
-#name column names for x_test with second column of object "features", y_test is 1 column that containt the activitylablID, 
+#name column names for x_test with second column of object "features", y_test is 1 column that contains the activityID, 
 #subject_test is one column with repetitive subjectID
 colnames(x_test) <- features$V2
 colnames(y_test) <- "activityID"
