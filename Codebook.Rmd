@@ -1,0 +1,148 @@
+---
+title: "Codebook.Rmd"
+author: "Me"
+date: "6 juli 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Week 4 assignment getting and cleaning Data Coursera
+
+You should create one R script called run_analysis.R that does the following.
+DONE
+
+##0. Prepare the dataset
+Download the zipfile and unzip it
+```{r} 
+Dataset <- download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip", destfile = "./FUCI.zip")
+
+unzip(zipfile="./FUCI.zip", exdir = ".")
+```
+
+Load text files of activity label in object activity_labels (activity_labels and name the columns "activityID" and "activityType")
+
+```{r}
+activity_labels <- read.table("./UCI HAR Dataset/activity_labels.txt") 
+colnames(activity_labels)<- c("activityID", "activityType")
+
+names(activity_labels)
+```
+
+Load text file in object features (these are the list of column names of the dataset)
+```{r}
+features <- read.table("./UCI HAR Dataset/features.txt")
+
+head(features)
+```
+
+##################################################################
+#1. Merges the training and the test sets to create one data set.
+##################################################################
+
+Merge training - set
+```{r}
+#load training set in object subject_train (subjectID/rows), x_train (data), y_train (activityID)
+subject_train <- read.table("./UCI HAR Dataset/train/subject_train.txt")
+x_train <- read.table("./UCI HAR Dataset/train/x_train.txt")
+y_train <- read.table("./UCI HAR Dataset/train/y_train.txt")
+
+#there are no column names for x_train, name x_train columns with the second column of object "features", y_train is 1 column that contains the activityID, 
+#subject_train is one column with repetitive subjectID
+colnames(x_train) <- features$V2
+colnames(y_train) <- "activityID"
+colnames(subject_train) <- "subjectID"
+
+#then we can merge these sets together with cbind
+merge_train <- cbind(x_train, y_train, subject_train)
+```
+
+Merge test - set
+```{r}
+#load test data in object
+subject_test <- read.table("./UCI HAR Dataset/test/subject_test.txt")
+x_test <- read.table("./UCI HAR Dataset/test/X_test.txt")
+y_test <- read.table("./UCI HAR Dataset/test/Y_test.txt")
+
+#name column names for x_test with second column of object "features", y_test is 1 column that containt the activitylablID, 
+#subject_test is one column with repetitive subjectID
+colnames(x_test) <- features$V2
+colnames(y_test) <- "activityID"
+colnames(subject_test) <- "subjectID"
+
+#merge test set with cbind
+merge_test <- cbind(x_test, y_test, subject_test)
+```
+
+```{r}
+##merge test and training set## <-- objective 1. Merges the training and the test sets to create one data set.
+merge_train_test <- rbind(merge_test, merge_train)
+
+names(merge_train_test)
+```
+
+
+##########################################################################################
+#2.Extracts only the measurements on the mean and standard deviation for each measurement.
+##########################################################################################
+
+```{r}
+##look at all the column names
+colnames <- colnames(merge_train_test)
+
+##set criteria to the column names to get only column names that contain the IDs, mean and std
+mean_std <- (grepl("activityID", colnames)| grepl("subjectID", colnames)| grepl("mean..", colnames)|grepl("std..", colnames))
+
+##make subset by using the criteria of mean_std
+MergeSetMeanStd <- merge_train_test[, mean_std == TRUE]
+
+names(MergeSetMeanStd)
+```
+
+#########################################################################
+#3.Uses descriptive activity names to name the activities in the data set
+#########################################################################
+```{r}
+
+##Replace activity ID and activityType by merging the activity_labels by activityID
+MergeSetMeanStd_activity <- merge(MergeSetMeanStd, activity_labels, by = "activityID", all.x = TRUE)
+
+names(MergeSetMeanStd_activity)
+
+```
+
+#####################################################################
+#4.Appropriately labels the data set with descriptive variable names.
+#####################################################################
+
+```{r}
+##write full out variables so no confusion will be induced
+##Every name that begins with t or f should be replaced by time or frequency, respectively.
+names(MergeSetMeanStd_activity)<-gsub("^t", "time", names(MergeSetMeanStd_activity))
+names(MergeSetMeanStd_activity)<-gsub("^f", "frequency", names(MergeSetMeanStd_activity))
+
+##Write out Acc, Gyro, Mag so it is complete clear to everybody else
+names(MergeSetMeanStd_activity)<-gsub("Acc", "Accelerometer", names(MergeSetMeanStd_activity))
+names(MergeSetMeanStd_activity)<-gsub("Gyro", "Gyroscope", names(MergeSetMeanStd_activity))
+names(MergeSetMeanStd_activity)<-gsub("Mag", "Magnitude", names(MergeSetMeanStd_activity))
+
+##There are some names that contain BodyBody, this should be Body.
+names(MergeSetMeanStd_activity)<-gsub("BodyBody", "Body", names(MergeSetMeanStd_activity))
+
+names(MergeSetMeanStd_activity)
+```
+
+####################################################################################################################################
+#5.From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+####################################################################################################################################
+
+```{r}
+##create new dataset with mean statistics
+Tidysetavg <- aggregate( . ~ subjectID + activityID, MergeSetMeanStd_activity, mean)
+Tidysetavg <- Tidysetavg[order(Tidysetavg$subjectID, Tidysetavg$activityID), ]
+
+##write output
+write.table(Tidysetavg, "Tidysetavg.txt", row.name = FALSE)
+```
